@@ -21,8 +21,8 @@ class BookCreate(BaseModel):
     tags: list[str] = Field(default_factory=list)
     publisher: Publisher | None = None
 
-    # @field_validator("title")
-    # @classmethod
+    @field_validator("title")
+    @classmethod
     def strip_title(cls, v: str) -> str:
         v = v.strip()
         if not v:
