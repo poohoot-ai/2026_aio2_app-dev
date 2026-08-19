@@ -48,6 +48,16 @@ class BookCreate(BaseModel):
         }
     }
 
+class BookUpdate(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=100)
+    author: str | None = Field(default=None, min_length=1, max_length=50)
+    year: int | None = Field(default=None, ge=1900, le=2026,
+                            description="출판 연도",
+                            examples=[2024],
+                            )
+    tags: list[str] | None = None
+    publisher: Publisher | None = None
+
 class BookResponse(BookCreate):
     id: int
 

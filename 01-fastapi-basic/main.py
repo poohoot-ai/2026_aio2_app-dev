@@ -1,6 +1,6 @@
 import httpx
 from fastapi import FastAPI, status, HTTPException
-from schemas import WeatherResponse, BookCreate, BookResponse, GoogleBooks, ErrorDetail
+from schemas import WeatherResponse, BookCreate, BookUpdate, BookResponse, GoogleBooks, ErrorDetail
 from external_api import fetch_weather, fetch_books, load_fallback_books
 from fastapi.staticfiles import StaticFiles
 
@@ -105,6 +105,68 @@ def create_book(book: BookCreate):
     books.append(new_book)
     return new_book
 
+@app.get(
+    "/books/{book_id}",
+    response_model=BookResponse,
+    tags=["도서"],
+    summary="도서 단건 조회",
+    responses={
+        404: {"description": "해당 번호의 도서가 없습니다", "model": ErrorDetail},
+    },
+)
+def read_book(book_id: int):
+    for book in books:
+        if book["id"] == book_id:
+            return book
+    raise HTTPException(status_code=404, detail="도서를 찾을 수 없습니다")
+
+@app.put(
+    "/books/{book_id}",
+    response_model=BookResponse,
+    tags=["도서"],
+    summary="도서 전체 수정",
+    responses={404: {"description": "해당 번호의 도서가 없습니다"}},
+)
+def update_book(book_id: int, book: BookCreate):
+    """
+    도서 정보 전면 교체.
+    일부 수정시, PATCH 사용하세요
+    """
+
+    # 원래 도서정보 탐색
+    for i, b in enumerate(books):
+        if b["id"] == book_id:
+            books[i] = {"id": book_id, **book.model_dump()}
+
+            #성공시
+            return books[i]
+
+    #실패시
+    raise HTTPException(status_code=404, detail="도서를 찾을 수 없습니다")
+
+@app.patch(
+    "/books/{book_id}",
+    response_model=BookResponse,
+    tags=["도서"],
+    summary="도서 일부 정보 수정",
+    responses={404: {"description": "해당 번호의 도서가 없습니다"}},
+)
+def patch_book(book_id: int, patch: BookUpdate):    
+    """
+    도서 정보 일부 수정.
+    전면 교체시, PUT 사용하세요
+    """
+
+    # 원래 도서정보 탐색
+    for b in books:
+        if b["id"] == book_id:
+            changes = patch.model_dump(exclude_unset=True)
+            b.update(changes)
+            return b
+        
+    raise HTTPException(status_code=404, detail="도서를 찾을 수 없습니다")
+
+
 # 테스트 시나리오
 # 1. 새로운 책 등록
 # 2. 책 목록을 조회
@@ -127,7 +189,6 @@ def create_book(book: BookCreate):
 async def weather(latitude: float = 36.8, longitude: float = 127.1):
     return await fetch_weather(latitude, longitude)
 
-#엔드포인트
 @app.get(
     "/books/external",
     response_model=list[GoogleBooks],
@@ -163,18 +224,3 @@ async def search_external_books(keyword: str, limit: int = 5, fallback: bool = F
         if fallback:
             return load_fallback_books()
         raise HTTPException(status_code=502, detail="외부 API에 연결할 수 없습니다")
-
-@app.get(
-    "/books/{book_id}",
-    response_model=BookResponse,
-    tags=["도서"],
-    summary="도서 단건 조회",
-    responses={
-        404: {"description": "해당 번호의 도서가 없습니다", "model": ErrorDetail},
-    },
-)
-def read_book(book_id: int):
-    for book in books:
-        if book["id"] == book_id:
-            return book
-    raise HTTPException(status_code=404, detail="도서를 찾을 수 없습니다")
