@@ -1,4 +1,6 @@
 import httpx
+import json
+from pathlib import Path
 from schemas import GoogleBooks, WeatherResponse
 
 import os
@@ -54,3 +56,11 @@ async def fetch_books(keyword: str, limit: int=5) -> list[GoogleBooks]:
                         )
                     )
     return result
+
+def load_fallback_books() -> list[GoogleBooks]:
+    path = Path(__file__).parent / "sample_books.json"
+    if not path.exists():
+        return []
+    with open(path, encoding="utf-8") as f:
+        raw = json.load(f)
+    return [GoogleBooks(**item) for item in raw]
