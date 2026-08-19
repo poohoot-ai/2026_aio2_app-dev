@@ -3,7 +3,19 @@ from schemas import WeatherResponse, BookCreate, BookResponse, GoogleBooks
 from external_api import fetch_weather, fetch_books
 from fastapi.staticfiles import StaticFiles
 
-app = FastAPI()
+tags_metadata = [
+    {"name": "도서", "description": "도서 등록, 조회, 검색"},
+    {"name": "외부 연동", "description": "Google Books와 날씨 API 연동"},
+    {"name": "시스템", "description": "서버 상태 확인"},
+]
+
+app = FastAPI(
+    openapi_tags=tags_metadata,
+    title="도서 관리 API",
+    description="도서를 등록·조회하고 외부 검색으로 정보를 가져오는 API",
+    version="1.0.0",
+    contact={"name": "홍길동", "email": "hong@example.com"},
+)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 books = [
@@ -27,7 +39,7 @@ def info():
     return {"name": "도서 관리 API", "version": "0.1.0"}
 
 # 도서의 목록을 제공하는 엔드포인트
-@app.get("/books", response_model=list[BookResponse])
+@app.get("/books", tags=["도서"], response_model=list[BookResponse])
 def list_books():
     return books
 
@@ -55,8 +67,22 @@ def filter_books(keyword: str = "", sort: str = ""):
 def page_books(skip: int = 0, limit: int = 2):
     return books[skip: skip + limit]
 
-@app.post("/books", response_model=BookResponse, status_code=status.HTTP_201_CREATED)
+@app.post(
+        "/books", 
+        tags=["도서"],
+        summary="도서 등록",
+        response_description="등록된 도서 정보",        
+        response_model=BookResponse, 
+        status_code=status.HTTP_201_CREATED
+    )
 def create_book(book: BookCreate):
+    """
+    새 도서를 등록합니다.
+
+    - **title**: 1자 이상 100자 이하
+    - **year**: 1900 이상 2100 이하
+    - 같은 제목이 이미 있으면 409를 반환합니다.
+    """
     for b in books:
         if b["title"] == book.title:
             raise HTTPException(status_code=409, detail="기존에 등록된 도서입니다")
@@ -93,7 +119,13 @@ async def weather(latitude: float = 36.8, longitude: float = 127.1):
 async def search_external_books(keyword: str, limit: int=5):
     return await fetch_books(keyword, limit)
 
-@app.get("/books/{book_id}", response_model=BookResponse)
+@app.get(
+        "/books/{book_id}", 
+        responses={
+            404: {"description": "해당 번호의 도서가 없음"},
+        },
+        response_model=BookResponse
+    )
 def read_book(book_id: int):
     for book in books:
         if book["id"] == book_id:

@@ -5,11 +5,28 @@ class Publisher(BaseModel):
     city: str = "고양"
 
 class BookCreate(BaseModel):
-    title: str = Field(min_length=1, max_length=100)
+    title: str = Field(
+        min_length=1, 
+        max_length=100,
+        description="도서 제목",
+        examples=["처음 시작하는 FastAPI"],        
+    )
     author: str = Field(min_length=1, max_length=50)
-    year: int = Field(ge=1900, le=2026)
+    year: int = Field(ge=1900, le=2026, description="출판 연도", examples=[2024])
     tags: list[str] = Field(default_factory=list)
     publisher: Publisher | None = None
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "title": "처음 시작하는 FastAPI",
+                    "author": "빌 루바노빅",
+                    "year": 2024,
+                    "tags": ["python", "web"],
+                }
+            ]
+        }
+    }    
 
     @field_validator("title")
     @classmethod
